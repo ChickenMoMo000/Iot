@@ -1,0 +1,65 @@
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <SoftwareSerial.h>
+
+
+#define SCREEN_WIDTH 128   // OLED display width, in pixels
+#define SCREEN_HEIGHT 64   // OLED display height, in pixels
+#define OLED_RESET -1      // Reset pin # (or -1 if sharing Arduino reset pin)
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+int currentSensorPin = A0;   // Analog pin for current sensor
+int voltageSensorPin = A1;   // Analog pin for voltage sensor (voltage divider)
+
+float referenceVoltage = 5.0;  // Reference voltage of Arduino Uno
+float resistorR1 = 10000.0;  // 10kΩ resistor
+float resistorR2 = 22000.0;  // 22kΩ resistor
+
+float minCurrentThreshold = 0.1;  // Adjust this threshold based on your setup
+
+void setup() {
+  Serial.begin(9600); // Initialize SoftwareSerial
+
+  pinMode(currentSensorPin, INPUT);
+  pinMode(voltageSensorPin, INPUT);
+
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  delay(2000);
+  display.clearDisplay();
+  display.setTextColor(WHITE);
+}
+
+void loop() {
+  // Measure current
+  int currentSensorValue = analogRead(currentSensorPin);
+  float current = (currentSensorValue * referenceVoltage) / 1023.0;
+
+  // Measure voltage using the voltage divider formula
+  int voltageSensorValue = analogRead(voltageSensorPin);
+  float voltage = (voltageSensorValue * referenceVoltage) / 1023.0;
+  voltage = voltage * ((resistorR1 + resistorR2) / resistorR2);  // Voltage divider formula
+
+  // if voltage exceeds 6V
+  if (voltage > 6.0) {
+    // Sending signal to NodeMCU
+    Serial.println("HighVoltage");
+  }
+
+  // Display voltage on OLED
+  display.clearDisplay();
+  display.setCursor(10, 20);
+  display.setTextSize(2);
+  display.setTextColor(WHITE);
+  display.print("Voltage: ");
+  display.print(String(voltage, 2));
+  display.println(" V");
+  display.display();
+
+  Serial.print("Voltage: ");
+  Serial.print(voltage, 2);
+  Serial.println(" V");
+
+  delay(1000);  // Adjust delay as needed for your application
+}
